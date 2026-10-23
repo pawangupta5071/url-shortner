@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.url import URL
 from app.schemas.url import URLCreate
 from app.services.short_code_generator import encode_base62
+from app.services.cache import get_cached_url,cache_url
 
 
 
@@ -73,15 +74,31 @@ def create_url(data:URLCreate,db:Session)->URL:
     
 
 def resolve_url(short_code:str,db:Session)->str:
+    cached_url = get_cached_url(short_code=short_code)
+    if cached_url is not None:
+        return cached_url
+    
     url = db.scalar(
         select(URL).where(URL.short_code == short_code)
     )
+        
     if url is None:
         raise URLNotFound(short_code)
     
-    if (
-        url.expires_at is not None 
-        and url.expires_at<=datetime.now(timezone.utc)
-    ):
-        raise URLExpired(short_code)
+    now = datetime.now(timezone.utc)
+    
+    if url.expires_at is not None:
+        if url.expires_at <= now:
+            raise URLExpired(short_code)
+        remaining_seconds = int((url.expires_at-now).total_seconds())
+        ttl = min(remaining_seconds,ttl)
+    else:
+        ttl = 300
+    
+    if ttl>0:
+        cache_url(
+            short_code=short_code,
+            long_url=url.long_url,
+            ttl=ttl
+        )
     return url.long_url

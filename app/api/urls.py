@@ -22,7 +22,7 @@ router = APIRouter(tags=["URLS"])
 
 DBSession = Annotated[Session,Depends(get_db)]
 
-@router.post("api/v1/urls",response_model=URLResponse,status_code=201)
+@router.post("/api/v1/urls",response_model=URLResponse,status_code=201)
 def shorten_url(data: URLCreate, db: DBSession):
     try:
         url = create_url(data=data,db=db)

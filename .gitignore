@@ -49,6 +49,7 @@ logs/
 # Local databases and data
 *.db
 *.sqlite3
+.services/
 
 # Alembic
 # Keep alembic.ini and migration scripts tracked.
